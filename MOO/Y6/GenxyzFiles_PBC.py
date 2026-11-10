@@ -204,16 +204,15 @@ if __name__ == '__main__':
     fin_lattices = []
     for i, pair in pairs.iterrows():
         if pair.dist <= MOO_cutoff: 
-            if pair.fin_lattice != 0:
-                fin_lattice = pair.fin_lattice          
-                molecule1 = bigmolecules[(bigmolecules['Mol'] == pair.init) & (bigmolecules['Lattice'] == 0)]
-                write_xyz_file(molecule1,pair.init,0)
-                molecule2 = bigmolecules[(bigmolecules['Mol'] == pair.fin) & (bigmolecules['Lattice'] == fin_lattice)]
-                write_xyz_file(molecule2,pair.fin,fin_lattice)       
-                fin_lattices.append(fin_lattice)
-                seps.append(pair.dist)
-                init.append(pair.init)
-                fin.append(pair.fin)
+            fin_lattice = pair.fin_lattice          
+            molecule1 = bigmolecules[(bigmolecules['Mol'] == pair.init) & (bigmolecules['Lattice'] == 0)]
+            write_xyz_file(molecule1,pair.init,0)
+            molecule2 = bigmolecules[(bigmolecules['Mol'] == pair.fin) & (bigmolecules['Lattice'] == fin_lattice)]
+            write_xyz_file(molecule2,pair.fin,fin_lattice)       
+            fin_lattices.append(fin_lattice)
+            seps.append(pair.dist)
+            init.append(pair.init)
+            fin.append(pair.fin)
     
     np.savetxt('init.file', np.asarray(init), fmt='%.0f')
     np.savetxt('fin.file', np.asarray(fin), fmt='%.0f')

@@ -27,7 +27,7 @@ mapfile -t fin_array < "fin.file"
 mapfile -t fin_lattice_ar < "finlattice.file"
 #Get length of the array to know how many pairs there are
 NPAIRS=${#init_array[@]}
-
+NPAIRS=$(($NPAIRS - 1))
 # select one of the input files based on current array job index
 for i in $(seq 0 1 $NPAIRS); do 
 	init_mol=${init_array[$i]}

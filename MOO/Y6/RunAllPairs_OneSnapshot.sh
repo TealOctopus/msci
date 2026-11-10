@@ -4,8 +4,7 @@
 
 T=20000
 EXAMPLE_NAME="Y6-MD-PBC"
-OUTPUT_DIR="$PBS_O_WORKDIR/pyMOO_results_${EXAMPLE_NAME}_${T}ps"
-mkdir -p "$OUTPUT_DIR"
+OUT_CSV="$PBS_O_WORKDIR/${EXAMPLE_NAME}-Ts-MOO-${T}ps.csv"
 
 eval "$($HOME/miniforge3/bin/conda shell.bash hook)"
 conda activate msci
@@ -16,9 +15,10 @@ python GenxyzFiles_PBC.py $T $HOME/MSci/CounterpoiseCode/Structures/Y6
 mapfile -t init_array < "init.file"
 mapfile -t fin_array < "fin.file"
 mapfile -t fin_lattice_ar < "finlattice.file"
+mapfile -t dist_array < "dist.file"
 #Get length of the array to know how many pairs there are
 NPAIRS=${#init_array[@]}
-
+NPAIRS=$(($NPAIRS - 1))
 # select one of the input files based on current array job index
 for i in $(seq 0 1 $NPAIRS); do 
 	init_mol=${init_array[$i]}
@@ -75,12 +75,24 @@ make all
 
 cd $PBS_O_WORKDIR
 
-for i in $(seq 0 1 $NPAIRS); do 
+echo "init,fin,fin_lattice,dist,Th_MOO,Te_MOO" > "$OUT_CSV"
+
+for i in $(seq 0 1 $NPAIRS); do
 	init_mol=${init_array[$i]}
 	fin_mol=${fin_array[$i]}
 	fin_lattice=${fin_lattice_ar[$i]}
-	OUTPUT_NAME="Mol${init_mol}_Mol${fin_mol}"
-	echo $OUTPUT_NAME
-	../bin/abject MoleculesPBC/Mol${init_mol}_Lattice0.xyz MOsPBC/zindo_MOs_Mol${init_mol}_Lattice0 MoleculesPBC/Mol${fin_mol}_Lattice${fin_lattice}.xyz MOsPBC/zindo_MOs_Mol${fin_mol}_Lattice${fin_lattice} MoleculesPBC/$OUTPUT_NAME.xyz > "$OUTPUT_DIR/$OUTPUT_NAME.txt"
+	A=Mol${init_mol}_Lattice0
+	B=Mol${fin_mol}_Lattice${fin_lattice}
+
+	result=$(../bin/abject MoleculesPBC/$A.xyz MOsPBC/zindo_MOs_$A \
+	         MoleculesPBC/$B.xyz MOsPBC/zindo_MOs_$B \
+	         MoleculesPBC/Mol${init_mol}_Mol${fin_mol}.xyz)
+	read -r Jh Je extra <<< "$result"
+
+	if [[ "$Jh" =~ ^-?[0-9] && -n "$Je" ]]; then
+		echo "$init_mol,$fin_mol,$fin_lattice,${dist_array[$i]},$Jh,$Je" >> "$OUT_CSV"
+	else
+		echo "FAILED Mol${init_mol}_Mol${fin_mol}: $result" >&2
+	fi
 done
 
