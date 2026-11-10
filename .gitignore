@@ -1,0 +1,26 @@
+# compiled code
+*.o
+MOO/bin/
+__pycache__/
+# old version-control folders from the original code
+.svn/
+.DS_Store
+# generated inputs (remade by the scripts)
+GenCPFiles/
+JobFiles/
+Molecules/
+MoleculesPBC/
+MOs/
+MOsPBC/
+init.file
+fin.file
+finlattice.file
+dist.txt
+zindo_job.gjf
+# outputs and job logs
+pyMOO_results_*/
+*.log
+*.chk
+*.csv
+*.o[0-9]*
+*.e[0-9]*

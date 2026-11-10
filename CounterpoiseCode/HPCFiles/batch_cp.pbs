@@ -1,0 +1,53 @@
+#!/bin/bash
+#PBS -N CP
+#PBS -l walltime=2:00:00
+#PBS -l select=1:ncpus=16:mem=12GB
+#PBS -J 1-18
+#PBS -R eo
+
+module load Gaussian
+
+# create temporary calculation directory
+job_num=$(echo $PBS_JOBID | cut -d [ -f 1)
+calc_dir=$EPHEMERAL/TEMP_CP/${job_num}/temp_$PBS_ARRAY_INDEX
+mkdir -p ${calc_dir}
+
+# folder from which the job is submitted
+submission_folder=$PBS_O_WORKDIR/JobFiles
+submission_folder_name=$(basename "$submission_folder")
+
+# output location
+output_dir=$EPHEMERAL/"outputs_cp"/$submission_folder_name
+
+# go into the folder from which the job was submitted, and get an array of input files
+cd $submission_folder
+
+# find all job files in directory
+jobfiles_array=($(find -type f -name "*.com"))
+
+# or provide a file containing a list of locations
+#mapfile -t jobfiles_array < "rerun_CP.jobs"
+
+# select one of the input files based on current array job index
+index=$(($PBS_ARRAY_INDEX - 1))
+calc_input=${jobfiles_array[index]}
+current_file=${calc_input%.com}
+
+# make a folder in the temp working dir with a unique name based on the current file
+folder_name="${current_file//\//_}"
+cd $calc_dir
+mkdir -p $folder_name
+
+# copy the input file into the temp working directory
+cp $submission_folder/$calc_input $calc_dir/$folder_name/job.com
+
+# Go into the temp working directory and run the job
+cd $calc_dir/$folder_name/
+timeout 1.95h g16 job.com 
+
+# copy the output to the ephemeral
+mkdir -p $output_dir/${calc_input%/*}
+cp job.log $output_dir/${calc_input%.com}.log
+
+# remove the temporary calculation directory
+rm -r $calc_dir

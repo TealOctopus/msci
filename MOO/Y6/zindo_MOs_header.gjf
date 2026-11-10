@@ -1,0 +1,8 @@
+%nprocshared=8
+%mem=10GB
+
+# zindo punch=mo nosymm
+
+Get ZINDO orbitals for MOO
+
+0 1
