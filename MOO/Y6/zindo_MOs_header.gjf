@@ -1,4 +1,4 @@
-%nprocshared=8
+%nprocshared=1
 %mem=10GB
 
 # zindo punch=mo nosymm
