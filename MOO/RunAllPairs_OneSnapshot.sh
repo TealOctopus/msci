@@ -14,7 +14,7 @@ RUN_DIR="$HOME/MSci/runs/${MOL}_${T}ps_${CUTOFF}A"
 
 
 EXAMPLE_NAME="${MOL}-MD-PBC"
-OUT_CSV="$PBS_O_WORKDIR/${EXAMPLE_NAME}-Ts-MOO-${T}ps_${CUTOFF}A.csv"
+OUT_CSV="$RUN_DIR/Ts_MOO.csv"
 eval "$($HOME/miniforge3/bin/conda shell.bash hook)"
 conda activate msci
 
@@ -51,7 +51,7 @@ run_zindo () { #define a function
 		return
 	fi
 
-	cat cat $HOME/MSci/MOO/zindo_MOs_header.gjf MoleculesPBC/${name}.xyz > zindo_job.gjf
+	cat $HOME/MSci/MOO/zindo_MOs_header.gjf MoleculesPBC/${name}.xyz > zindo_job.gjf
 	#combine 'header' file with the molecule file of init_mol to make a zindo input file
 	#this is because gaussian needs a specific structure with details in this header
 	#header contains:
