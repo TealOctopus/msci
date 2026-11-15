@@ -2,31 +2,36 @@
 #PBS -l walltime=08:00:00
 #PBS -l select=1:ncpus=1:mem=12GB
 
-T=20000
-EXAMPLE_NAME="Y6-MD-PBC"
-OUT_CSV="$PBS_O_WORKDIR/${EXAMPLE_NAME}-Ts-MOO-${T}ps.csv"
+MOL=${MOL:-Y6}
+if [ -n "$PBS_ARRAY_INDEX" ]; then
+    T=$((20000 + 6000*PBS_ARRAY_INDEX))     # array job: index 0-5 -> 20000...50000
+else
+    T=${T:-20000} #use the T passed in with qsub -v otherwise use 20000
+fi
+CUTOFF=5
+RUN_DIR="$HOME/MSci/runs/${MOL}_${T}ps_${CUTOFF}A"
 
+
+
+EXAMPLE_NAME="${MOL}-MD-PBC"
+OUT_CSV="$PBS_O_WORKDIR/${EXAMPLE_NAME}-Ts-MOO-${T}ps_${CUTOFF}A.csv"
 eval "$($HOME/miniforge3/bin/conda shell.bash hook)"
 conda activate msci
 
-cd $PBS_O_WORKDIR #this is the directory you are working in when you type qsub
-python GenxyzFiles_PBC.py $T $HOME/MSci/CounterpoiseCode/Structures/Y6 #find the pairs
+mkdir -p "$RUN_DIR"
+cd "$RUN_DIR"
+
+[ -f init.file ] || python $HOME/MSci/common/gen_dimer_and_mols.py $MOL $T $CUTOFF #find the pairs
 #Read in initial and final molecules in the pair
+
 mapfile -t init_array < "init.file"
 mapfile -t fin_array < "fin.file"
 mapfile -t fin_lattice_ar < "finlattice.file"
 mapfile -t dist_array < "dist.txt"
+
 #Get length of the array to know how many pairs there are
 NPAIRS=${#init_array[@]}
 NPAIRS=$(($NPAIRS - 1))
-# select one of the input files based on current array job index
-for i in $(seq 0 1 $NPAIRS); do 
-	init_mol=${init_array[$i]}
-	fin_mol=${fin_array[$i]}
-	fin_lattice=${fin_lattice_ar[$i]}
-	python MakePair_PBC.py $init_mol $fin_mol $fin_lattice 
-	#write the pairs, ie combine .xyz files into Mol{i}_Mol{j}.xyz
-done
 
 module purge
 module load Gaussian
@@ -46,7 +51,7 @@ run_zindo () { #define a function
 		return
 	fi
 
-	cat zindo_MOs_header.gjf MoleculesPBC/${name}.xyz > zindo_job.gjf
+	cat cat $HOME/MSci/MOO/zindo_MOs_header.gjf MoleculesPBC/${name}.xyz > zindo_job.gjf
 	#combine 'header' file with the molecule file of init_mol to make a zindo input file
 	#this is because gaussian needs a specific structure with details in this header
 	#header contains:
@@ -66,14 +71,14 @@ run_zindo () { #define a function
 	# Only keep the result if Gaussian finished without an error AND fort.7 exists and is not empty
 	if g16 zindo_job.gjf && [ -s fort.7 ]; then #this line runs the gaussian (g16), and the if also then tests it the command finished successfully
 		mv fort.7 zindo_MOs_${name}
-		cp zindo_MOs_${name} $PBS_O_WORKDIR/MOsPBC/
+		cp zindo_MOs_${name} "$RUN_DIR/MOsPBC/"
 	else
 		echo "GAUSSIAN FAILED for ${name}" >&2 #>&2 means it goes to the error log, not the output log
-		cp zindo_job.log $PBS_O_WORKDIR/FAILED_${name}.log 2>/dev/null #saves the log file of the failed gaussianfor debugging,
+		cp zindo_job.log "$RUN_DIR/FAILED_${name}.log" 2>/dev/null #saves the log file of the failed gaussianfor debugging,
 		#2>/dev/null means if the file doesn't exist, or there is an error, it will not print anything 
 	fi
 
-	cd $PBS_O_WORKDIR
+	cd "$RUN_DIR"
 }
 
 
@@ -98,12 +103,7 @@ module load "tools/prod"
 module load "GCC/11.3.0"
 
 
-cd $HOME/MSci/MOO/src
-mkdir -p ../bin
-make clean 
-make all
-
-cd $PBS_O_WORKDIR
+cd $RUN_DIR
 
 echo "init,fin,fin_lattice,dist,Th_MOO,Te_MOO" > "$OUT_CSV"
 #writes the CSV header line to the output file
@@ -117,9 +117,9 @@ for i in $(seq 0 1 $NPAIRS); do
 	B=Mol${fin_mol}_Lattice${fin_lattice}
 	#names the molecules
 
-	result=$(../bin/abject MoleculesPBC/$A.xyz MOsPBC/zindo_MOs_$A \
+	result=$($HOME/MSci/MOO/bin/abject MoleculesPBC/$A.xyz MOsPBC/zindo_MOs_$A \
 	         MoleculesPBC/$B.xyz MOsPBC/zindo_MOs_$B \
-	         MoleculesPBC/Mol${init_mol}_Mol${fin_mol}.xyz)
+	         MoleculesPBC/Mol${init_mol}_Mol${fin_mol}_Lattice${fin_lattice}.xyz)
 	#this line runs abject with 5 inputs: A's geometry and orbitals
 	#B's geometry and orbitals, and the dimer geometry
 
@@ -133,7 +133,7 @@ for i in $(seq 0 1 $NPAIRS); do
 		echo "$init_mol,$fin_mol,$fin_lattice,${dist_array[$i]},$Jh,$Je" >> "$OUT_CSV"
 		# write to the output CSV file if the calculation was successful
 	else
-		echo "FAILED Mol${init_mol}_Mol${fin_mol}: $result" >&2
+		echo "FAILED Mol${init_mol}_Mol${fin_mol}_Lattice${fin_lattice}: $result" >&2
 	fi
 done
 

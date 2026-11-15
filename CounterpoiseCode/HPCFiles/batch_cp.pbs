@@ -2,7 +2,6 @@
 #PBS -N CP
 #PBS -l walltime=2:00:00
 #PBS -l select=1:ncpus=16:mem=12GB
-#PBS -J 1-18
 #PBS -R eo
 
 module load Gaussian
@@ -13,17 +12,17 @@ calc_dir=$EPHEMERAL/TEMP_CP/${job_num}/temp_$PBS_ARRAY_INDEX
 mkdir -p ${calc_dir}
 
 # folder from which the job is submitted
-submission_folder=$PBS_O_WORKDIR/JobFiles
-submission_folder_name=$(basename "$submission_folder")
+RUN_NAME="${MOL}_${T}ps_${CUTOFF}A"
+submission_folder=$HOME/MSci/runs/${RUN_NAME}/CPJobs
 
 # output location
-output_dir=$EPHEMERAL/"outputs_cp"/$submission_folder_name
+output_dir=$EPHEMERAL/outputs_cp/${RUN_NAME}
 
 # go into the folder from which the job was submitted, and get an array of input files
 cd $submission_folder
 
 # find all job files in directory
-jobfiles_array=($(find -type f -name "*.com"))
+jobfiles_array=($(find . -type f -name "*.com" | sort))
 
 # or provide a file containing a list of locations
 #mapfile -t jobfiles_array < "rerun_CP.jobs"

@@ -8,7 +8,7 @@ import numpy as np
 import pandas as pd
 import os
 import generate_CP_GJF as cp_gjf
-import generate_crystal_rotations as gcrys
+import redundant.generate_crystal_rotations as gcrys
 
 #%%
 

@@ -21,3 +21,10 @@ One the Gaussian calculations have finished, you can use CheckForFailedJobs.sh t
 	You will need to change the output_dir variable to wherever your gaussian output files are
 When all Gaussian calculations are finished, you can use extract_Ts_batch to get the couplings
 	This file calls CalcJs.py - again, you will need to change the data_file variable to point to wherever your gaussian output files are
+
+
+
+FS:
+python ~/MSci/CounterpoiseCode/make_cp_jobs.py Y6 20000 5. This creates runs/Y6_20000ps_5A/ if needed, writes the job files and prints the qsub command. Then run that command.
+When the jobs finish: bash CheckForFailedJobs.sh Y6_20000ps_5A.
+qsub -v MOL=Y6,T=20000,CUTOFF=5 extract_Ts_batch.pbs.

@@ -5,17 +5,7 @@
 
 """
 import os
-from os import listdir
-import pandas as pd
 from inspect import cleandoc  # to ignore indents when printing to file
-
-def read_geom(file_in, path_in):
-    """read .xzy to dataframe."""
-    # !!!!!! check the skiprows, xyz from Pymol have to skip 2 rows and from Gaussian 1
-    mol_xyz = pd.read_table(path_in + str(file_in), skiprows=1, sep='\s+', 
-                            names=['atom', 'X', 'Y', 'Z']).drop_duplicates()
-    mol_xyz = mol_xyz.round({'X' : 6, 'Y' : 6, 'Z' : 6})
-    return mol_xyz
 
 def write_CP_com(geom_molA, geom_molB, job_name, dir_out,
                  nprocshared=8,mem = '10GB',
@@ -89,24 +79,5 @@ def write_CP_com(geom_molA, geom_molB, job_name, dir_out,
 
             '''), file=text_file)
             
-def GaussInputFile_list(df, dir_out, inp_dir_xyz_in,
-                        nprocshared=8, mem = '10GB',method = 'b3lyp/6-31g*',
-                        append_t = False, t = 0, PBC = 0):
-    lf = pd.DataFrame(listdir(inp_dir_xyz_in), columns = ['files'])
-    for i in range(0,len(df)):  
-        mol_in = lf[lf['files'].str.contains(str(int(df.iloc[i]['init'])))]['files'].values
-        mol_fi = lf[lf['files'].str.contains(str(int(df.iloc[i]['fin'])))]['files']
-        if PBC == 0:
-            mol_fi = mol_fi.values
-        elif PBC == 1:
-            mol_fi = mol_fi[mol_fi.str.contains('Lattice' + str(int(df.iloc[i]['fin_lattice'])))].values
-        mol_1 = str(mol_in[0]) 
-        mol_2 = str(mol_fi[0])
-        mol1_geom = read_geom(mol_1,inp_dir_xyz_in)
-        mol2_geom = read_geom(mol_2,inp_dir_xyz_in)
-        job_name = str(mol_in[0])[:-4] + '_' + str(mol_fi[0])[:-4]
-        if append_t:
-            job_name = job_name + '_' + str(t) + 'ps'       
-        write_CP_com(mol1_geom, mol2_geom, job_name, dir_out, 
-                     nprocshared=nprocshared,mem=mem,method=method,extra_word='')
+
     
