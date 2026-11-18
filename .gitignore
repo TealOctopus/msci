@@ -1,27 +1,33 @@
-# compiled code
-*.o
-MOO/bin/
+# =====================================================
+# Rule of thumb: track code, inputs and small results.
+# Ignore junk, compiled code, and files too big for GitHub.
+# =====================================================
+
+# ---- Junk from the Mac, editors and Python ----
+.DS_Store
 __pycache__/
+# nano's emergency saves (made when ssh drops)
+*.save
+# editor backup copies
+*~
 # old version-control folders from the original code
 .svn/
-.DS_Store
-# generated inputs (remade by the scripts)
-GenCPFiles/
-JobFiles/
-Molecules/
-MoleculesPBC/
-MOs/
-MOsPBC/
-init.file
-fin.file
-finlattice.file
-dist.txt
-zindo_job.gjf
-# outputs and job logs
-pyMOO_results_*/
+
+# ---- Compiled MOO code (rebuild with make in MOO/src) ----
+*.o
+MOO/bin/
+
+# ---- Big Gaussian output ----
+# The couplings get extracted from these into the Ts_*.csv files,
+# so we only keep the CSVs in git.
 *.log
 *.chk
-*.csv
+MOs/
+MOsPBC/
+
+# ---- PBS job output (myjob.o12345 / myjob.e12345) ----
 *.o[0-9]*
 *.e[0-9]*
-!runs/**/Ts_*.csv
+
+# ---- Scratch file overwritten for every molecule ----
+zindo_job.gjf
