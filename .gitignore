@@ -24,3 +24,4 @@ pyMOO_results_*/
 *.csv
 *.o[0-9]*
 *.e[0-9]*
+!runs/**/Ts_*.csv
