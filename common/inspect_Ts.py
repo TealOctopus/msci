@@ -1,11 +1,11 @@
 """
-inspect_Ts.py - find the dimers where MOO and CP agree least (or most).
+add_vars.py - find the dimers where MOO and CP agree least (or most).
 
 Usage (on CX3, in the msci env):
-    python inspect_Ts.py Y6_20000ps_5A                  # 10 worst, holes
-    python inspect_Ts.py Y6_20000ps_5A -n 5 -c e       # 5 worst, electrons
-    python inspect_Ts.py Y6_20000ps_5A -n 5 --best     # 5 most accurate
-    python inspect_Ts.py Y6_20000ps_5A --min_cp 5      # only pairs with |J_CP| > 5 meV
+    python add_vars.py Y6_20000ps_5A                  # 10 worst, holes
+    python add_vars.py Y6_20000ps_5A -n 5 -c e       # 5 worst, electrons
+    python add_vars.py Y6_20000ps_5A -n 5 --best     # 5 most accurate
+    python add_vars.py Y6_20000ps_5A --min_cp 5      # only pairs with |J_CP| > 5 meV
 """
 import argparse
 import os
