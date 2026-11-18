@@ -64,12 +64,11 @@ def geometry(run_dir, init, fin, fin_lattice):
         'stack_dist':    perp,                    # Å, ~3.5 for a pi-stack
         'slip':          np.sqrt(max(np.dot(d, d) - perp**2, 0)),  # Å, in-plane offset
     }
-#need more details on what these mean
 
 
 # ---------- 3. pick the N worst / best and describe them ----------
 
-def show(df, run_dir, n=10, carrier='h', best=False, min_cp=1.0): #change min_cp if applicable
+def show(df, run_dir, n=10, carrier='h', best=False, min_cp=1.0):
     col = f'frac_diff_{carrier}'
     # ignore pairs whose CP coupling is too small for the fractional difference to mean much
     keep = 1000 * df[f'T{carrier}_CP'].abs() > min_cp
@@ -81,3 +80,39 @@ def show(df, run_dir, n=10, carrier='h', best=False, min_cp=1.0): #change min_cp
     for r in ranked.itertuples():
         g = geometry(run_dir, r.init, r.fin, r.fin_lattice)
         rows.append({
+            'init': r.init, 'fin': r.fin, 'fin_lattice': r.fin_lattice,
+            'dist': r.dist,
+            f'T{carrier}_CP_meV':  1000 * getattr(r, f'T{carrier}_CP'),
+            f'T{carrier}_MOO_meV': 1000 * getattr(r, f'T{carrier}_MOO'),
+            col: getattr(r, col),
+            **g,
+        })
+    out = pd.DataFrame(rows)
+
+    which = 'BEST' if best else 'WORST'
+    label = 'holes' if carrier == 'h' else 'electrons'
+    print(f'\n{which} {n} pairs for {label} (dist, centroid_dist, stack_dist, slip in Å; angles in degrees)')
+    print(out.round(3).to_string(index=False))
+    return out
+
+
+def worst(df, run_dir, n=10, carrier='h', min_cp=1.0):
+    return show(df, run_dir, n, carrier, best=False, min_cp=min_cp)
+
+
+def best(df, run_dir, n=10, carrier='h', min_cp=1.0):
+    return show(df, run_dir, n, carrier, best=True, min_cp=min_cp)
+
+
+if __name__ == '__main__':
+    ap = argparse.ArgumentParser()
+    ap.add_argument('run', help='e.g. Y6_20000ps_5A')
+    ap.add_argument('-n', type=int, default=10, help='number of pairs to show')
+    ap.add_argument('-c', '--carrier', choices=['h', 'e'], default='h')
+    ap.add_argument('--best', action='store_true', help='show the most accurate pairs instead')
+    ap.add_argument('--min_cp', type=float, default=1.0,
+                    help='only rank pairs with |J_CP| above this, in meV (default 1; 0 = no filter)')
+    a = ap.parse_args()
+
+    df, run_dir = load_compare(a.run)
+    show(df, run_dir, a.n, a.carrier, a.best, a.min_cp)
