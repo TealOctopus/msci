@@ -1,0 +1,2 @@
+Error, file MoleculesPBC/Mol_Lattice0.xyzdoes not exist
+Error in read MoleculesPBC/Mol_Lattice0.xyz OR MOsPBC/zindo_MOs_Mol_Lattice0
