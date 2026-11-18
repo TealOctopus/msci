@@ -80,9 +80,26 @@ def main():
                 print(f"    Mol{r.init}  Mol{r.fin}  Lattice{r.fin_lattice}")
     #lists likely failed jobs
 
-    for c in ['Th_MOO', 'Te_MOO', 'Th_CP', 'Te_CP']:
-        both[c + '_meV'] = 1000 * both[c]
-    #unit conversion
+     # convert eV -> meV and rename, so only meV columns are written
+    T_COLS = ['Th_MOO', 'Te_MOO', 'Th_CP', 'Te_CP']
+    both[T_COLS] = 1000 * both[T_COLS]
+    both = both.rename(columns={c: c + '_meV' for c in T_COLS})
+
+
+    for c in ['h', 'e']:
+        cp = both[f'T{c}_CP_meV'].abs()
+        moo = both[f'T{c}_MOO_meV'].abs()
+        # (|MOO| - |CP|) / |CP| : +0.5 means MOO is 50% too big, -0.5 means 50% too small
+        both[f'frac_diff_{c}'] = (moo - cp) / cp
+
+    both=both.rename(columns={'t_ps': 'time_ps'})
+
+    order = ['init', 'fin', 'fin_lattice', 'dist',
+            'Th_MOO_meV', 'Th_CP_meV', 'frac_diff_h',
+            'Te_MOO_meV', 'Te_CP_meV', 'frac_diff_e',
+            'time_ps']
+    
+    both = both[order]
 
     out_csv = os.path.join(run_dir, 'Ts_compare.csv')
     both.sort_values('dist' if 'dist' in both else KEYS).to_csv(out_csv, index=False, float_format='%.6f')

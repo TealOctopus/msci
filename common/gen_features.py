@@ -1,8 +1,8 @@
 """
-gen_features_csv.py  -  geometric features for every dimer in one snapshot.
+gen_features.py  -  geometric features for every dimer in one snapshot.
 
 Usage (on CX3 or Mac, in the msci env):
-    python ~/MSci/common/gen_features_csv.py Y6_20000ps_5A
+    python ~/MSci/common/gen_features.py Y6_20000ps_5A
 
 Reads (all written by prepare_snapshot when the run was set up):
     init.file, fin.file, finlattice.file, dist.txt   the dimer list and closest C-C distance
