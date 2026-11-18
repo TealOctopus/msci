@@ -1,0 +1,35 @@
+#!/bin/bash
+#PBS -N CP_one
+#PBS -l walltime=8:00:00
+#PBS -l select=1:ncpus=16:mem=12GB
+# Re-run the counterpoise calculation for ONE dimer: part1 -> part2 -> pair, then CalcJ.
+# The new logs go to a separate folder, so the original logs are NOT overwritten.
+#
+# Submit from anywhere, e.g.:
+#   qsub -v MOL=Y6,T=20000,CUTOFF=5,DIMER=Mol12_Lattice0_Mol40_Lattice3_20000ps rerun_one_cp.pbs
+# DIMER is the folder name inside runs/<RUN_NAME>/CPJobs/
+
+RUN_NAME="${MOL}_${T}ps_${CUTOFF}A"
+job_dir=$HOME/MSci/runs/${RUN_NAME}/CPJobs/${DIMER}
+out_root=$EPHEMERAL/outputs_cp_rerun/${RUN_NAME}
+out_dir=$out_root/${DIMER}
+mkdir -p $out_dir
+
+module load Gaussian
+cd $TMPDIR
+for part in part1 part2 pair; do
+    cp $job_dir/${DIMER}_${part}.com job.com
+    g16 job.com          # no 'timeout' here, so a slow SCF isn't cut off
+    cp job.log $out_dir/${DIMER}_${part}.log
+    if tail -n 1 job.log | grep -q "Normal termination"; then
+        echo "$part: Normal termination"
+    else
+        echo "$part: DID NOT FINISH NORMALLY - check $out_dir/${DIMER}_${part}.log"
+    fi
+    rm -f job.com job.log *.chk
+done
+
+module purge
+eval "$($HOME/miniforge3/bin/conda shell.bash hook)"
+conda activate msci
+python $HOME/MSci/CounterpoiseCode/HPCFiles/CalcOneJ.py $out_root $DIMER

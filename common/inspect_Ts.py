@@ -95,3 +95,5 @@ fig.tight_layout()
 out_png = os.path.join(run_dir, 'Ts_compare.png')
 fig.savefig(out_png, dpi=150)
 print(f"Wrote {out_png}")
+
+# %%
