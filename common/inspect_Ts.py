@@ -76,10 +76,9 @@ exclude = set()                    # dropped completely, e.g. {(101, 106, 23)}
 flag    = {(116, 162, 0)}                   # drawn as red crosses, but are left out of r_log calc
 
 #instead of listing dimers by hand, could also do so by creating a rule:
-flag_rule = {                      # optional per-carrier rule for red crosses (or None, if no rules)
-    #'h': lambda d: d['Th_CP_meV'].abs() > 150,     # e.g. the 207 meV CP outlier
-    'h':None, #for multiple rules: : [lamda d:..., lamba d:...]
-    'e': None
+flag_rule = {
+    'h': [lambda d: d['Th_CP_meV'].abs() > 150],   # one rule, still inside [ ]
+    'e': [],                                       # no rules
 }
 
 ids = pd.Series(list(zip(both.init, both.fin, both.fin_lattice)), index=both.index)
@@ -92,15 +91,21 @@ if max_dist is not None: keep = keep & both['dist'] <= max_dist
 df = both[keep]
 ids_keep = ids[keep] #an array of the kept ids
 
+# one shared colour scale, built only from the kept points
+cvals = df[colour_feat]
+vmin, vmax = clip_colour or (cvals.min(), cvals.max())
+norm = plt.Normalize(vmin, vmax)
+
+
 fig, axes = plt.subplots(1, 2, figsize=(10, 4.6))
-for ax, carrier, title, lab in zip(axes, ['h', 'e'], ['Holes', 'Electrons']):
+for ax, carrier, title in zip(axes, ['h', 'e'], ['Holes', 'Electrons']):
     x = df[f'T{carrier}_CP_meV'].abs()
     y = df[f'T{carrier}_MOO_meV'].abs()
 
 
     red_cross_set = ids_keep.isin(flag) #ie builds boolean column about which ids have been flagged
     meets_any_rule = pd.Series(False, index=df.index)   # start with nothing flagged
-    for rule in flag_rules.get(carrier, []):
+    for rule in flag_rule.get(carrier, []):
         meets_any_rule = meets_any_rule | rule(df)
     #|means or
     is_flagged = red_cross_set | meets_any_rule
@@ -130,7 +135,7 @@ for ax, carrier, title, lab in zip(axes, ['h', 'e'], ['Holes', 'Electrons']):
     scale = 'log' if use_log else 'linear'
     ax.set(xscale=scale, yscale=scale, xlim=(lo, hi), ylim=(lo, hi),
             xlabel='|J| counterpoise (meV)', ylabel='|J| MOO (meV)',
-            title=f"{title}  (r_log = {summary[lab]['Pearson r (log10)']:.2f})")
+            title=f"{title}  (r_log = {r_log:.2f}, N = {m.sum()})")
     ax.legend(loc='upper left', frameon=False)
     fig.colorbar(sc, ax=ax, label=colour_label,
                  extend='both' if clip_colour else 'neither')

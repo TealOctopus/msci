@@ -82,6 +82,22 @@ def diagnose(root, dimer, K=3):
     # note: uses the diagonal site energies e_i of A and e_j of B for each element (i,j)
     #apparently finds a symmetric lowdin orthogonalisation (?)
 
+    #  where do A's and B's frontier orbitals end up among the PAIR's orbitals?
+    # PA[i, k] = <phi_i^A | psi_k^AB>, so PA[i, k]**2 is the fraction of A's orbital i found in pair orbital k.
+    # Summed over ALL pair orbitals k this should be 1 (the pair orbitals form a complete set).
+    wA_H = PA[hA, :]**2          # A's HOMO
+    wB_H = PB[hB, :]**2          # B's HOMO
+    wA_L = PA[hA + 1, :]**2      # A's LUMO
+    wB_L = PB[hB + 1, :]**2      # B's LUMO
+
+    # Window of pair orbitals to store: HOMO-4 ... LUMO+4
+    W = 5
+    idxW = np.arange(hAB - W + 1, hAB + W + 1)
+
+    # Site energies inside the pair (diagonal of JAA, JBB), in eV
+    siteA = np.diag(JAA)
+    siteB = np.diag(JBB)
+
     # Keep only the frontier block
     block = np.ix_(idxA, idxB)
     return {
@@ -93,6 +109,17 @@ def diagnose(root, dimer, K=3):
         "S_MO":   S_MO[block],
         "nbasis": np.array([A.nbasis, B.nbasis, AB.nbasis]),
         "nmo":    np.array([A.nmo, B.nmo, AB.nmo]),
+        "pair_window":  np.arange(-W + 1, W + 1),       # pair orbital positions: -4..0 = H-4..HOMO, 1..5 = LUMO..L+4
+        "wA_HOMO":      wA_H[idxW],
+        "wB_HOMO":      wB_H[idxW],
+        "wA_LUMO":      wA_L[idxW],
+        "wB_LUMO":      wB_L[idxW],
+        "wA_HOMO_total": wA_H.sum(),
+        "wB_HOMO_total": wB_H.sum(),
+        "wA_LUMO_total": wA_L.sum(),
+        "wB_LUMO_total": wB_L.sum(),
+        "site_HOMO":    np.array([siteA[hA], siteB[hB]]),          # eV
+        "site_LUMO":    np.array([siteA[hA + 1], siteB[hB + 1]]),  # eV
     }
 
 

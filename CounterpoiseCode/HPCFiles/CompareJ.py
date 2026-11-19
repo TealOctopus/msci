@@ -36,6 +36,14 @@ rows = {
     "2|J LUMO-LUMO| (meV)":           lambda r: f"{2*abs(r['J_eff'][L, L]):.0f}",
     "S HOMO-HOMO":                    lambda r: f"{r['S_MO'][H, H]:.4f}",
     "S LUMO-LUMO":                    lambda r: f"{r['S_MO'][L, L]:.4f}",
+        "A HOMO: total weight":           lambda r: f"{r['wA_HOMO_total']:.4f}",
+    "B HOMO: total weight":           lambda r: f"{r['wB_HOMO_total']:.4f}",
+    "A HOMO: in pair HOMO + HOMO-1":  lambda r: f"{r['wA_HOMO'][3] + r['wA_HOMO'][4]:.3f}",
+    "B HOMO: in pair HOMO + HOMO-1":  lambda r: f"{r['wB_HOMO'][3] + r['wB_HOMO'][4]:.3f}",
+    "A LUMO: in pair LUMO + LUMO+1":  lambda r: f"{r['wA_LUMO'][5] + r['wA_LUMO'][6]:.3f}",
+    "B LUMO: in pair LUMO + LUMO+1":  lambda r: f"{r['wB_LUMO'][5] + r['wB_LUMO'][6]:.3f}",
+    "Site energy diff, HOMO (meV)":   lambda r: f"{1000*(r['site_HOMO'][0] - r['site_HOMO'][1]):.0f}",
+    "Predicted HOMO splitting (meV)": lambda r: f"{1000*np.sqrt((r['site_HOMO'][0]-r['site_HOMO'][1])**2 + 4*(r['J_eff'][H,H]/1000)**2):.0f}",
 }
 
 w = 22
@@ -51,3 +59,29 @@ for d in dimers:
     print(f"{'':6s}" + "".join(f"{l:>9s}" for l in labels))
     for lab, row in zip(labels, r["J_eff"]):
         print(f"{lab:6s}" + "".join(f"{x:9.1f}" for x in row))
+
+#This produces matrix M:
+#M_ij = <phi_i^A|H|phi_j^B> , in MeV
+#ie it contains all the possible couplings between the six frontier orbitals
+#HOMO-HOMO is Th, LUMO-LUMO is Te
+
+#in two level picture, HOMO and HOMO-1 are split by:
+#sqrt(deltaE^2 +4 T^2) (T=Th in this case)
+#so the splitting must be greater than 2J
+# ---------- where A's and B's frontier orbitals end up among the pair's orbitals ----------
+for d in dimers:
+    r = data[d]
+    names = []
+    for p in r["pair_window"]:
+        if p < 0:
+            names.append(f"H{p}")
+        elif p == 0:
+            names.append("HOMO")
+        elif p == 1:
+            names.append("LUMO")
+        else:
+            names.append(f"L+{p-1}")
+    print(f"\nWeight of each orbital in the PAIR's orbitals, for {short(d)}")
+    print(f"{'':8s}" + "".join(f"{n:>7s}" for n in names))
+    for key in ["wA_HOMO", "wB_HOMO", "wA_LUMO", "wB_LUMO"]:
+        print(f"{key:8s}" + "".join(f"{x:7.3f}" for x in r[key]))
