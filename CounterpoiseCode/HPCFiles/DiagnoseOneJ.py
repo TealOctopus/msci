@@ -98,6 +98,16 @@ def diagnose(root, dimer, K=3):
     siteA = np.diag(JAA)
     siteB = np.diag(JBB)
 
+    # Step 3c: what are the pair's orbitals made of?
+    # compA[i, k] = fraction of A's orbital idxA[i] found in pair orbital idxW[k]
+    compA = PA[np.ix_(idxA, idxW)]**2
+    compB = PB[np.ix_(idxB, idxW)]**2
+
+    # How much of each molecule's OCCUPIED orbitals ends up in the pair's EMPTY orbitals.
+    # Counted in "orbitals' worth": ~0 is normal, ~1 would mean one whole occupied orbital has gone missing.
+    occA_in_empty = (PA[:hA + 1, hAB + 1:]**2).sum()
+    occB_in_empty = (PB[:hB + 1, hAB + 1:]**2).sum()
+
     # Keep only the frontier block
     block = np.ix_(idxA, idxB)
     return {
@@ -120,6 +130,12 @@ def diagnose(root, dimer, K=3):
         "wB_LUMO_total": wB_L.sum(),
         "site_HOMO":    np.array([siteA[hA], siteB[hB]]),          # eV
         "site_LUMO":    np.array([siteA[hA + 1], siteB[hB + 1]]),  # eV
+        "compA":         compA,
+        "compB":         compB,
+        "occA_in_empty": occA_in_empty,
+        "occB_in_empty": occB_in_empty,
+        "siteA_window":  siteA[idxA],      # site energies in the pair of A's H-2 ... L+2 (eV)
+        "siteB_window":  siteB[idxB],
     }
 
 

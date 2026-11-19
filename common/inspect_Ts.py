@@ -93,7 +93,8 @@ ids_keep = ids[keep] #an array of the kept ids
 
 # one shared colour scale, built only from the kept points
 cvals = df[colour_feat]
-vmin, vmax = clip_colour or (cvals.min(), cvals.max())
+lo_pct, hi_pct = 5, 95          # ignore the lowest and highest 5% when setting colours
+vmin, vmax = np.percentile(cvals, [lo_pct, hi_pct])
 norm = plt.Normalize(vmin, vmax)
 
 
@@ -113,7 +114,7 @@ for ax, carrier, title in zip(axes, ['h', 'e'], ['Holes', 'Electrons']):
     plot_x, plot_y = x[~is_flagged], y[~is_flagged]
     cross_x, cross_y = x[is_flagged], y[is_flagged]
 
-    sc = ax.scatter(plot_x, plot_y, c=cvals[~is_flagged], s=18, cmap='viridis')
+    sc = ax.scatter(plot_x, plot_y, c=cvals[~is_flagged], s=18, cmap='plasma', norm=norm)
     if is_flagged.any():
         ax.scatter(cross_x, cross_y, marker='x', c='red', s=45, lw=1.3, zorder=3,
                    label=f'flagged ({is_flagged.sum()})')

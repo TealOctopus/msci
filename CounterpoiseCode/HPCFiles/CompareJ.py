@@ -44,6 +44,8 @@ rows = {
     "B LUMO: in pair LUMO + LUMO+1":  lambda r: f"{r['wB_LUMO'][5] + r['wB_LUMO'][6]:.3f}",
     "Site energy diff, HOMO (meV)":   lambda r: f"{1000*(r['site_HOMO'][0] - r['site_HOMO'][1]):.0f}",
     "Predicted HOMO splitting (meV)": lambda r: f"{1000*np.sqrt((r['site_HOMO'][0]-r['site_HOMO'][1])**2 + 4*(r['J_eff'][H,H]/1000)**2):.0f}",
+    "A occupied found in pair empty": lambda r: f"{r['occA_in_empty']:.3f}",
+    "B occupied found in pair empty": lambda r: f"{r['occB_in_empty']:.3f}",,
 }
 
 w = 22
@@ -85,3 +87,22 @@ for d in dimers:
     print(f"{'':8s}" + "".join(f"{n:>7s}" for n in names))
     for key in ["wA_HOMO", "wB_HOMO", "wA_LUMO", "wB_LUMO"]:
         print(f"{key:8s}" + "".join(f"{x:7.3f}" for x in r[key]))
+
+for d in dimers:
+    r = data[d]
+    labels = list(r["labels"])
+    names = []
+    for p in r["pair_window"]:
+        if p < 0:
+            names.append(f"H{p}")
+        elif p == 0:
+            names.append("HOMO")
+        elif p == 1:
+            names.append("LUMO")
+        else:
+            names.append(f"L+{p-1}")
+    for mol, key, site in [("A", "compA", "siteA_window"), ("B", "compB", "siteB_window")]:
+        print(f"\n{short(d)}: fraction of molecule {mol}'s orbitals (rows) in each PAIR orbital (columns)")
+        print(f"{'':6s}" + "".join(f"{n:>7s}" for n in names) + f"{'site (eV)':>11s}")
+        for lab, row, e in zip(labels, r[key], r[site]):
+            print(f"{lab:6s}" + "".join(f"{x:7.3f}" for x in row) + f"{e:11.3f}")
