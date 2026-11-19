@@ -106,3 +106,21 @@ for d in dimers:
         print(f"{'':6s}" + "".join(f"{n:>7s}" for n in names) + f"{'site (eV)':>11s}")
         for lab, row, e in zip(labels, r[key], r[site]):
             print(f"{lab:6s}" + "".join(f"{x:7.3f}" for x in row) + f"{e:11.3f}")
+
+# ---------- what the pair's HOMO is made of ----------
+def orb_name(p):
+    if p < 0:
+        return f"H{p}"
+    elif p == 0:
+        return "HOMO"
+    elif p == 1:
+        return "LUMO"
+    else:
+        return f"L+{p-1}"
+
+for d in dimers:
+    r = data[d]
+    print(f"\nPair HOMO of {short(d)} (energy {r['E_pairHOMO']:.3f} eV)")
+    print(f"  fraction in A's occupied orbitals: {r['pairHOMO_Aocc']:.3f}   in B's occupied orbitals: {r['pairHOMO_Bocc']:.3f}")
+    print("  largest from A: " + ", ".join(f"{orb_name(p)} {w:.3f}" for p, w in zip(r["pairHOMO_topA"], r["pairHOMO_wA"])))
+    print("  largest from B: " + ", ".join(f"{orb_name(p)} {w:.3f}" for p, w in zip(r["pairHOMO_topB"], r["pairHOMO_wB"])))

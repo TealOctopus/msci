@@ -108,6 +108,13 @@ def diagnose(root, dimer, K=3):
     occA_in_empty = (PA[:hA + 1, hAB + 1:]**2).sum()
     occB_in_empty = (PB[:hB + 1, hAB + 1:]**2).sum()
 
+    # Step 3d: what is the pair's HOMO made of, using ALL of A's and B's orbitals?
+    # Each molecule's orbitals form a complete set, so each of these sums to 1 on its own.
+    cA = PA[:, hAB]**2              # weight of each of A's orbitals in the pair HOMO
+    cB = PB[:, hAB]**2
+    topA = np.argsort(cA)[::-1][:5] # the 5 largest contributions, biggest first
+    topB = np.argsort(cB)[::-1][:5]
+
     # Keep only the frontier block
     block = np.ix_(idxA, idxB)
     return {
@@ -136,6 +143,13 @@ def diagnose(root, dimer, K=3):
         "occB_in_empty": occB_in_empty,
         "siteA_window":  siteA[idxA],      # site energies in the pair of A's H-2 ... L+2 (eV)
         "siteB_window":  siteB[idxB],
+        "pairHOMO_topA": topA - hA,      # position relative to A's HOMO: 0 = HOMO, -1 = HOMO-1, 1 = LUMO, ...
+        "pairHOMO_wA":   cA[topA],
+        "pairHOMO_topB": topB - hB,
+        "pairHOMO_wB":   cB[topB],
+        "pairHOMO_Aocc": cA[:hA + 1].sum(),   # fraction of the pair HOMO in A's occupied orbitals
+        "pairHOMO_Bocc": cB[:hB + 1].sum(),
+        "E_pairHOMO":    E[hAB],             # eV
     }
 
 
