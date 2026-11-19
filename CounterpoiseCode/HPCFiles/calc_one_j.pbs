@@ -1,0 +1,12 @@
+#!/bin/bash
+#PBS -N CalcOneJ
+#PBS -l walltime=1:00:00
+#PBS -l select=1:ncpus=1:mem=16GB
+# Calculate Th, Te for ONE dimer from logs that already exist. Runs as a job, so logging out doesn't kill it.
+# Submit e.g.:
+#   qsub -v ROOT=$EPHEMERAL/outputs_cp/Y6_20000ps_5A,DIMER=Mol116_Lattice0_Mol162_Lattice0_20000ps calc_one_j.pbs
+# Result: $ROOT/$DIMER/J_result.txt (and in the CalcOneJ.o<job number> file)
+
+eval "$($HOME/miniforge3/bin/conda shell.bash hook)"
+conda activate msci
+python $HOME/MSci/CounterpoiseCode/HPCFiles/CalcOneJ.py $ROOT $DIMER
