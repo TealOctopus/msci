@@ -45,7 +45,7 @@ rows = {
     "Site energy diff, HOMO (meV)":   lambda r: f"{1000*(r['site_HOMO'][0] - r['site_HOMO'][1]):.0f}",
     "Predicted HOMO splitting (meV)": lambda r: f"{1000*np.sqrt((r['site_HOMO'][0]-r['site_HOMO'][1])**2 + 4*(r['J_eff'][H,H]/1000)**2):.0f}",
     "A occupied found in pair empty": lambda r: f"{r['occA_in_empty']:.3f}",
-    "B occupied found in pair empty": lambda r: f"{r['occB_in_empty']:.3f}",,
+    "B occupied found in pair empty": lambda r: f"{r['occB_in_empty']:.3f}",
 }
 
 w = 22

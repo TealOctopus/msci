@@ -31,24 +31,6 @@ both  = pd.read_csv(os.path.join(run_dir, 'Ts_compare.csv'))
 feats = pd.read_csv(os.path.join(run_dir, 'Ts_features.csv'))
 print(f"{len(both)} dimers in compare, {len(feats)} in features")
 
-summary = {}
-for carrier, name in [('h', 'Holes'), ('e', 'Electrons')]:
-    x = both[f'T{carrier}_CP_meV'].abs()
-    y = both[f'T{carrier}_MOO_meV'].abs()
-
-    # log correlation needs both values > 0
-    m = (x > 0) & (y > 0)
-    r_log = np.corrcoef(np.log10(x[m]), np.log10(y[m]))[0, 1]
-    r_lin = np.corrcoef(x, y)[0, 1]
-
-    summary[name] = {
-        'N pairs': len(x),
-        'N used (log)': int(m.sum()),
-        'Pearson r (linear)': r_lin,
-        'Pearson r (log10)': r_log,
-        'MAE (meV)': (x - y).abs().mean(),
-    }
-
 # a bunch of stats
 
 
@@ -85,8 +67,8 @@ ids = pd.Series(list(zip(both.init, both.fin, both.fin_lattice)), index=both.ind
 #array storing our dimer identifying values
 
 keep = ~ids.isin(exclude) #(~ means not, so keep gives a true/false column that False if we should exclude)
-if min_dist is not None: keep = keep & both['dist'] >= min_dist
-if max_dist is not None: keep = keep & both['dist'] <= max_dist
+if min_dist is not None: keep = keep & (both['dist'] >= min_dist)
+if max_dist is not None: keep = keep & (both['dist'] <= max_dist)
 #our filtering stage
 df = both[keep]
 ids_keep = ids[keep] #an array of the kept ids
@@ -150,40 +132,81 @@ print(f"Wrote {out_png}")
 
 
 #%% Basic comparison between models
-#list of possible columns
-"""['init', 'fin', 'fin_lattice', 'dist',
-            'Th_MOO_meV', 'Th_CP_meV', 'frac_diff_h',
-            'Te_MOO_meV', 'Te_CP_meV', 'frac_diff_e',
-            'time_ps']"""
 
-min_dist = 1.
-colour_feat = 'dist' #change as required
+id_cols = ['init', 'fin', 'fin_lattice']
+feature_cols = [c for c in feats.columns if c not in id_cols]
+#print(feature_cols)
+#['dist', 'centroid_dist', 'plane_angle', 'long_axis_angle', 'stack_dist', 'slip']
+
+data = both.merge(feats.drop(columns='dist'), on=['init', 'fin', 'fin_lattice'], how='inner')
+
+
 use_log = False #boolean, use log scale or not
+min_dist, max_dist = None, None    # e.g. 3.0, 4.0  (Å); None = no cut
 
-fig, axes = plt.subplots(1, 2, figsize=(10, 4.6))
-for ax, carrier, title, lab in zip(axes, ['h', 'e'], ['Holes', 'Electrons'], summary):
-    x = df[f'T{carrier}_CP_meV'].abs()
-    y = both[f'T{carrier}_MOO_meV'].abs()
-    c = both[colour_feat] if colour_feat in both else None
+# dimers identified by (init, fin, fin_lattice)
+exclude = set()                    # dropped completely, e.g. {(101, 106, 23)}
+flag    = {(116, 162, 0)}                   # drawn as red crosses, but are left out of r_log calc
 
-    sc = ax.scatter(x, y, c=c, s=18, cmap='viridis')
-    pos = pd.concat([x, y])
-    pos = pos[pos > 0] #so we only keep non-zero couplings
-    lo, hi = pos.min() / 2, pos.max() *1.1
-    ax.plot([lo, hi], [lo, hi], 'k--', lw=0.8, label='y = x')
+#instead of listing dimers by hand, could also do so by creating a rule:
+flag_rule = {
+    'h': [lambda d: d['Th_CP_meV'].abs() > 150],   # one rule, still inside [ ]
+    'e': [],                                       # no rules
+}
+
+ids = pd.Series(list(zip(data.init, data.fin, data.fin_lattice)), index=data.index)
+#array storing our dimer identifying values
+
+keep = ~ids.isin(exclude) #(~ means not, so keep gives a true/false column that False if we should exclude)
+if min_dist is not None: keep = keep & (data['dist'] >= min_dist)
+if max_dist is not None: keep = keep & (data['dist'] <= max_dist)
+#our filtering stage
+df = data[keep]
+
+ids_keep = ids[keep] #an array of the kept ids
 
 
-    scale = 'log' if use_log else 'linear'
 
-    ax.set(xscale=scale, yscale=scale, xlim=(lo, hi), ylim=(lo, hi),
-            xlabel='|J| counterpoise (meV)', ylabel='|J| MOO (meV)',
-            title=f"{title}  (r_log = {summary[lab]['Pearson r (log10)']:.2f})")
-    ax.legend(loc='upper left', frameon=False)
-    if c is not None:
-        fig.colorbar(sc, ax=ax, label='closest C–C distance (Å)')
-fig.suptitle(RUN)
-fig.tight_layout()
-out_png = os.path.join(run_dir, 'Ts_compare.png')
-fig.savefig(out_png, dpi=150)
-print(f"Wrote {out_png}")
+for carrier, title in zip(['h', 'e'], ['Holes', 'Electrons']):
+    fig, axes = plt.subplots(2, 3, figsize=(12, 7))
+    for ax, feature in zip(axes.flat, feature_cols):
+    
+        x = df[feature]
+        y = df[f'frac_diff_{carrier}']
+
+        red_cross_set = ids_keep.isin(flag) #ie builds boolean column about which ids have been flagged
+        meets_any_rule = pd.Series(False, index=df.index)   # start with nothing flagged
+        
+        for rule in flag_rule.get(carrier, []):
+            meets_any_rule = meets_any_rule | rule(df)
+        #|means or
+        is_flagged = red_cross_set | meets_any_rule
+
+        plot_x, plot_y = x[~is_flagged], y[~is_flagged]
+        cross_x, cross_y = x[is_flagged], y[is_flagged]
+
+
+        sc = ax.scatter(plot_x, plot_y, marker ='x', s=18)
+        if is_flagged.any():
+            ax.scatter(cross_x, cross_y, marker='x', c='red', s=45, lw=1.3, zorder=3,
+                        label=f'flagged ({is_flagged.sum()})')
+            ax.legend(loc='upper left', frameon=False)
+
+
+
+        scale = 'log' if use_log else 'linear'
+        ax.set(xscale=scale, yscale='linear',
+                xlabel=feature, ylabel="Fractional Difference",
+                title=f"{feature}, >0 means T_MOO bigger")
+        ax.axhline(0, ls='--', c='k', lw=0.8)
+        
+
+
+    fig.suptitle(RUN)
+    fig.tight_layout()
+    out_png = os.path.join(run_dir, f'feature_comparison_{title}.png')
+    fig.savefig(out_png, dpi=150)
+    plt.show()
+    plt.close(fig)
+    print(f"Wrote {out_png}")
 #%%
