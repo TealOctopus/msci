@@ -65,6 +65,66 @@ both.describe().T
             'Te_MOO_meV', 'Te_CP_meV', 'frac_diff_e',
             'time_ps']"""
 
+min_dist, max_dist = None, None    # e.g. 3.0, 4.0  (Å); None = no cut
+colour_feat = 'dist'
+colour_label = {'dist': 'closest C–C distance (Å)', 'time_ps': 'time (ps)'}.get(colour_feat, colour_feat)
+use_log = False #boolean, use log scale or not
+clip_colour = None   # e.g. (3.1, 3.7) to stretch the colour map over the bulk of points
+
+# dimers identified by (init, fin, fin_lattice)
+exclude = set()                    # dropped completely, e.g. {(101, 106, 23)}
+flag    = {(116, 162, 0)}                   # drawn as red crosses, but are left out of r_log calc
+
+#instead of listing dimers by hand, could also do so by creating a rule:
+flag_rule = {                      # optional per-carrier rule for red crosses (or None, if no rules)
+    #'h': lambda d: d['Th_CP_meV'].abs() > 150,     # e.g. the 207 meV CP outlier
+    'h':None,
+    'e': None
+}
+
+ids = pd.Series(list(zip(both.init, both.fin, both.fin_lattice)), index=both.index)
+keep = ~ids.isin(exclude) #(~ means not, so not in exclude)
+if min_dist is not None: keep &= both['dist'] >= min_dist
+if max_dist is not None: keep &= both['dist'] <= max_dist
+#our filtering stage
+df = both[keep]
+
+
+fig, axes = plt.subplots(1, 2, figsize=(10, 4.6))
+for ax, carrier, title, lab in zip(axes, ['h', 'e'], ['Holes', 'Electrons']):
+    x = df[f'T{carrier}_CP_meV'].abs()
+    y = df[f'T{carrier}_MOO_meV'].abs()
+    c = both[colour_feat] if colour_feat in both else None
+
+    sc = ax.scatter(x, y, c=c, s=18, cmap='viridis')
+    pos = pd.concat([x, y])
+    pos = pos[pos > 0] #so we only keep non-zero couplings
+    lo, hi = pos.min() / 2, pos.max() *1.1
+    ax.plot([lo, hi], [lo, hi], 'k--', lw=0.8, label='y = x')
+
+
+    scale = 'log' if use_log else 'linear'
+
+    ax.set(xscale=scale, yscale=scale, xlim=(lo, hi), ylim=(lo, hi),
+            xlabel='|J| counterpoise (meV)', ylabel='|J| MOO (meV)',
+            title=f"{title}  (r_log = {summary[lab]['Pearson r (log10)']:.2f})")
+    ax.legend(loc='upper left', frameon=False)
+    if c is not None:
+        fig.colorbar(sc, ax=ax, label='closest C–C distance (Å)')
+fig.suptitle(RUN)
+fig.tight_layout()
+out_png = os.path.join(run_dir, 'Ts_compare.png')
+fig.savefig(out_png, dpi=150)
+print(f"Wrote {out_png}")
+
+
+#%% Basic comparison between models
+#list of possible columns
+"""['init', 'fin', 'fin_lattice', 'dist',
+            'Th_MOO_meV', 'Th_CP_meV', 'frac_diff_h',
+            'Te_MOO_meV', 'Te_CP_meV', 'frac_diff_e',
+            'time_ps']"""
+
 min_dist = 1.
 colour_feat = 'dist' #change as required
 use_log = False #boolean, use log scale or not
@@ -95,5 +155,4 @@ fig.tight_layout()
 out_png = os.path.join(run_dir, 'Ts_compare.png')
 fig.savefig(out_png, dpi=150)
 print(f"Wrote {out_png}")
-
-# %%
+#%%

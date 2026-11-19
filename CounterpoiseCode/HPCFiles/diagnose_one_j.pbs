@@ -1,0 +1,11 @@
+#!/bin/bash
+#PBS -N DiagnoseJ
+#PBS -l walltime=1:00:00
+#PBS -l select=1:ncpus=1:mem=16GB
+# Submit e.g.:
+#   qsub -v ROOT=$EPHEMERAL/outputs_cp/Y6_20000ps_5A,DIMER=Mol116_Lattice0_Mol162_Lattice0_20000ps diagnose_one_j.pbs
+# Result: $ROOT/$DIMER/J_diagnosis.txt
+
+eval "$($HOME/miniforge3/bin/conda shell.bash hook)"
+conda activate msci
+python $HOME/MSci/CounterpoiseCode/HPCFiles/DiagnoseOneJ.py $ROOT $DIMER
