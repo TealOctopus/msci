@@ -78,39 +78,64 @@ flag    = {(116, 162, 0)}                   # drawn as red crosses, but are left
 #instead of listing dimers by hand, could also do so by creating a rule:
 flag_rule = {                      # optional per-carrier rule for red crosses (or None, if no rules)
     #'h': lambda d: d['Th_CP_meV'].abs() > 150,     # e.g. the 207 meV CP outlier
-    'h':None,
+    'h':None, #for multiple rules: : [lamda d:..., lamba d:...]
     'e': None
 }
 
 ids = pd.Series(list(zip(both.init, both.fin, both.fin_lattice)), index=both.index)
-keep = ~ids.isin(exclude) #(~ means not, so not in exclude)
-if min_dist is not None: keep &= both['dist'] >= min_dist
-if max_dist is not None: keep &= both['dist'] <= max_dist
+#array storing our dimer identifying values
+
+keep = ~ids.isin(exclude) #(~ means not, so keep gives a true/false column that False if we should exclude)
+if min_dist is not None: keep = keep & both['dist'] >= min_dist
+if max_dist is not None: keep = keep & both['dist'] <= max_dist
 #our filtering stage
 df = both[keep]
-
+ids_keep = ids[keep] #an array of the kept ids
 
 fig, axes = plt.subplots(1, 2, figsize=(10, 4.6))
 for ax, carrier, title, lab in zip(axes, ['h', 'e'], ['Holes', 'Electrons']):
     x = df[f'T{carrier}_CP_meV'].abs()
     y = df[f'T{carrier}_MOO_meV'].abs()
-    c = both[colour_feat] if colour_feat in both else None
 
-    sc = ax.scatter(x, y, c=c, s=18, cmap='viridis')
+
+    red_cross_set = ids_keep.isin(flag) #ie builds boolean column about which ids have been flagged
+    meets_any_rule = pd.Series(False, index=df.index)   # start with nothing flagged
+    for rule in flag_rules.get(carrier, []):
+        meets_any_rule = meets_any_rule | rule(df)
+    #|means or
+    is_flagged = red_cross_set | meets_any_rule
+
+    plot_x, plot_y = x[~is_flagged], y[~is_flagged]
+    cross_x, cross_y = x[is_flagged], y[is_flagged]
+
+    sc = ax.scatter(plot_x, plot_y, c=cvals[~is_flagged], s=18, cmap='viridis')
+    if is_flagged.any():
+        ax.scatter(cross_x, cross_y, marker='x', c='red', s=45, lw=1.3, zorder=3,
+                   label=f'flagged ({is_flagged.sum()})')
+
+    # stats on the kept, un-flagged points
+    m = (~is_flagged) & (x > 0) & (y > 0)
+    r_log = np.corrcoef(np.log10(x[m]), np.log10(y[m]))[0, 1]
+
     pos = pd.concat([x, y])
     pos = pos[pos > 0] #so we only keep non-zero couplings
-    lo, hi = pos.min() / 2, pos.max() *1.1
+    if use_log:
+        lo, hi = pos.min()/2, pos.max()*2
+    else:
+        lo, hi = pos.min() / 2, pos.max() *1.1
+
     ax.plot([lo, hi], [lo, hi], 'k--', lw=0.8, label='y = x')
 
 
     scale = 'log' if use_log else 'linear'
-
     ax.set(xscale=scale, yscale=scale, xlim=(lo, hi), ylim=(lo, hi),
             xlabel='|J| counterpoise (meV)', ylabel='|J| MOO (meV)',
             title=f"{title}  (r_log = {summary[lab]['Pearson r (log10)']:.2f})")
     ax.legend(loc='upper left', frameon=False)
-    if c is not None:
-        fig.colorbar(sc, ax=ax, label='closest C–C distance (Å)')
+    fig.colorbar(sc, ax=ax, label=colour_label,
+                 extend='both' if clip_colour else 'neither')
+
+
 fig.suptitle(RUN)
 fig.tight_layout()
 out_png = os.path.join(run_dir, 'Ts_compare.png')
@@ -131,7 +156,7 @@ use_log = False #boolean, use log scale or not
 
 fig, axes = plt.subplots(1, 2, figsize=(10, 4.6))
 for ax, carrier, title, lab in zip(axes, ['h', 'e'], ['Holes', 'Electrons'], summary):
-    x = both[f'T{carrier}_CP_meV'].abs()
+    x = df[f'T{carrier}_CP_meV'].abs()
     y = both[f'T{carrier}_MOO_meV'].abs()
     c = both[colour_feat] if colour_feat in both else None
 
