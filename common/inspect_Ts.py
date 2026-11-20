@@ -143,6 +143,7 @@ data = both.merge(feats.drop(columns='dist'), on=['init', 'fin', 'fin_lattice'],
 
 use_log = False #boolean, use log scale or not
 min_dist, max_dist = None, None    # e.g. 3.0, 4.0  (Å); None = no cut
+min_T=1.
 
 # dimers identified by (init, fin, fin_lattice)
 exclude = set()                    # dropped completely, e.g. {(101, 106, 23)}
@@ -160,14 +161,14 @@ ids = pd.Series(list(zip(data.init, data.fin, data.fin_lattice)), index=data.ind
 keep = ~ids.isin(exclude) #(~ means not, so keep gives a true/false column that False if we should exclude)
 if min_dist is not None: keep = keep & (data['dist'] >= min_dist)
 if max_dist is not None: keep = keep & (data['dist'] <= max_dist)
-#our filtering stage
-df = data[keep]
-
-ids_keep = ids[keep] #an array of the kept ids
-
 
 
 for carrier, title in zip(['h', 'e'], ['Holes', 'Electrons']):
+    keep_c = keep
+    if min_T is not None: keep = keep & (data[f'T{carrier}_CP_meV'].abs() >= min_T)
+    
+    df = data[keep_c]
+    ids_keep = ids[keep_c] #an array of the kept ids
     fig, axes = plt.subplots(2, 3, figsize=(12, 7))
     for ax, feature in zip(axes.flat, feature_cols):
     
@@ -197,7 +198,7 @@ for carrier, title in zip(['h', 'e'], ['Holes', 'Electrons']):
         scale = 'log' if use_log else 'linear'
         ax.set(xscale=scale, yscale='linear',
                 xlabel=feature, ylabel="Fractional Difference",
-                title=f"{feature}, >0 means T_MOO bigger")
+                title=f"{feature}, >0 means T_MOO bigger, cutoff at T={min_T} meV")
         ax.axhline(0, ls='--', c='k', lw=0.8)
         
 
